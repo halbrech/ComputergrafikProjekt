@@ -110,7 +110,7 @@ int main(void)
     vuv_location = glGetAttribLocation(program, "vUV");
 
     //dummy
-    Sphere sphere{};
+    Sphere sphere(3);
     std::vector<Vertex> vertices;
     for(auto v : sphere.vertices) {
         Vertex vertex = {.pos = v, .norm = v, .color = v, .uv = glm::vec2(0.f, 0.f)};
