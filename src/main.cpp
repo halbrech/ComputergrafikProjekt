@@ -1,23 +1,15 @@
 #include <glad/glad.h>
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
+#include <glm/glm.hpp>
+#include "sphere.cpp"
  
 #include <linmath/linmath.h>
+#include <vector>
  
 #include <stdlib.h>
 #include <stdio.h>
- 
-static const struct
-{
-    float x, y;
-    float r, g, b;
-} vertices[3] =
-{
-    { -0.6f, -0.4f, 1.f, 0.f, 0.f },
-    {  0.6f, -0.4f, 0.f, 1.f, 0.f },
-    {   0.f,  0.6f, 0.f, 0.f, 1.f }
-};
- 
+
 static const char* vertex_shader_text =
 "#version 110\n"
 "uniform mat4 MVP;\n"
@@ -38,6 +30,26 @@ static const char* fragment_shader_text =
 "    gl_FragColor = vec4(color, 1.0);\n"
 "}\n";
  
+struct Vertex
+{
+    glm::vec3 pos;
+    glm::vec3 norm;
+    glm::vec3 color;
+    glm::vec2 uv; 
+};
+
+struct Mesh
+{
+    std::vector<Vertex> vertices;
+    std::vector<Vertex> vertices;
+    GLuint VERTEX_BUFFER_OBJECT;
+    GLuint VERTEX_ARRAY_OBJECT;
+    Mesh(std::vector<Vertex> &vertices);
+    void draw(GLuint shader);
+};
+
+
+
 static void error_callback(int error, const char* description)
 {
     fprintf(stderr, "Error: %s\n", description);
@@ -64,8 +76,7 @@ int main(void)
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
  
     window = glfwCreateWindow(640, 480, "Simple example", NULL, NULL);
-    if (!window)
-    {
+    if (!window) {
         glfwTerminate();
         exit(EXIT_FAILURE);
     }
@@ -78,9 +89,11 @@ int main(void)
  
     // NOTE: OpenGL error checks have been omitted for brevity
  
+    Sphere sphere{};
+    std::vector<triangle> vertices = sphere.triangles;
     glGenBuffers(1, &vertex_buffer);
     glBindBuffer(GL_ARRAY_BUFFER, vertex_buffer);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(triangle), vertices.data(), GL_STATIC_DRAW);
  
     vertex_shader = glCreateShader(GL_VERTEX_SHADER);
     glShaderSource(vertex_shader, 1, &vertex_shader_text, NULL);
@@ -100,11 +113,18 @@ int main(void)
     vcol_location = glGetAttribLocation(program, "vCol");
  
     glEnableVertexAttribArray(vpos_location);
-    glVertexAttribPointer(vpos_location, 2, GL_FLOAT, GL_FALSE,
+    glVertexAttribPointer(vpos_location, 3, GL_FLOAT, GL_FALSE,
                           sizeof(vertices[0]), (void*) 0);
+    
+    std::vector<float> colors;
+    colors.reserve(vertices.size());
+    for (int i = 0; i < 9 * vertices.size(); i++)
+    {
+        colors.push_back(((float)rand() / RAND_MAX)/2 + 0.5f); //r
+    }
     glEnableVertexAttribArray(vcol_location);
     glVertexAttribPointer(vcol_location, 3, GL_FLOAT, GL_FALSE,
-                          sizeof(vertices[0]), (void*) (sizeof(float) * 2));
+                          3 * sizeof(colors[0]), (void*) 0);
  
     while (!glfwWindowShouldClose(window))
     {
@@ -125,8 +145,10 @@ int main(void)
  
         glUseProgram(program);
         glUniformMatrix4fv(mvp_location, 1, GL_FALSE, (const GLfloat*) mvp);
-        glDrawArrays(GL_TRIANGLES, 0, 3);
- 
+        glDrawArrays(GL_TRIANGLES, 0, 60);
+        // TODO glDrawElements
+
+        //glDrawElements(GL_TRIANGLES, num_vertices, GL_UNSIGNED_INT, NULL);
         glfwSwapBuffers(window);
         glfwPollEvents();
     }

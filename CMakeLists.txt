@@ -5,9 +5,11 @@ set(CMAKE_CXX_STANDARD 14)            # Enable c++14 standard
 # Add main.cpp file of project root directory as source file
 set(SOURCE_FILES src/main.cpp src/glad.c)
 
-include_directories(include)
+find_package(OpenGL REQUIRED)
 
-link_libraries(GL glfw dl)
+include_directories(include)
 
 # Add executable target with source files listed in SOURCE_FILES variable
 add_executable(Computergrafik ${SOURCE_FILES})
+
+target_link_libraries(Computergrafik PRIVATE OpenGL::GL glfw dl)
