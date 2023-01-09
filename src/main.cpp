@@ -113,7 +113,7 @@ int main(void)
     Sphere sphere{};
     std::vector<Vertex> vertices;
     for(auto v : sphere.vertices) {
-        Vertex vertex = {.pos = v, .norm = v, .color = glm::vec3(1.f, 1.f, 1.f), .uv = glm::vec2(0.f, 0.f)};
+        Vertex vertex = {.pos = v, .norm = v, .color = v, .uv = glm::vec2(0.f, 0.f)};
         vertices.push_back(vertex);
     }
     Mesh mesh(vertices);
@@ -127,13 +127,13 @@ int main(void)
     glBindVertexArray(VaoID);
 
     glEnableVertexAttribArray(vpos_location);
-    glVertexAttribPointer(vpos_location, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void*) 0);  // 3 floats für Position
+    glVertexAttribPointer(vpos_location, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*) (0 * sizeof(float)));  // 3 floats für Position
     glEnableVertexAttribArray(vnorm_location);
-    glVertexAttribPointer(vnorm_location, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void*) 0); // 3 floats für den Normalenvektor
+    glVertexAttribPointer(vnorm_location, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*) (3 * sizeof(float))); // 3 floats für den Normalenvektor
     glEnableVertexAttribArray(vcol_location);
-    glVertexAttribPointer(vcol_location, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void*) 0); // 3 floats für den Normalenvektor
+    glVertexAttribPointer(vcol_location, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*) (6 * sizeof(float))); // 3 floats für den Farbwert
     glEnableVertexAttribArray(vuv_location);
-    glVertexAttribPointer(vuv_location, 2, GL_FLOAT, GL_FALSE, sizeof(glm::vec2), (void*) 0); // 2 floats als Textur-Koordinaten
+    glVertexAttribPointer(vuv_location, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*) (9 * sizeof(float))); // 2 floats als Textur-Koordinaten
 
     glGenBuffers(1, &IboID);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IboID);
