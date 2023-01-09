@@ -135,7 +135,7 @@ int main(void)
 
     glGenBuffers(1, &IboID);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IboID);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, 20 * 3 * sizeof(unsigned int), &sphere.indices, GL_STATIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sphere.indices.size() * sizeof(glm::uvec3), sphere.indices.data(), GL_STATIC_DRAW);
 
     while (!glfwWindowShouldClose(window))
     {
@@ -156,9 +156,10 @@ int main(void)
  
         glUseProgram(program);
         glUniformMatrix4fv(mvp_location, 1, GL_FALSE, (const GLfloat*) mvp);
-        glDrawArrays(GL_TRIANGLES, 0, 60);
+        //glDrawArrays(GL_TRIANGLES, 0, 60);
         // TODO glDrawElements
-        //glDrawElements(GL_TRIANGLES, 3 * sphere.indices.size(), GL_FLOAT, NULL);
+        //glDrawElements(GL_TRIANGLES, 3 * sphere.indices.size(), GL_UNSIGNED_INT, NULL); ????
+        glDrawElements(GL_TRIANGLES, 9 * sphere.indices.size(), GL_UNSIGNED_INT, NULL);
 
         //glDrawElements(GL_TRIANGLES, num_vertices, GL_UNSIGNED_INT, NULL);
         glfwSwapBuffers(window);
