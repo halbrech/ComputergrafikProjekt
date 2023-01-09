@@ -35,20 +35,17 @@ struct Vertex
     glm::vec3 pos;
     glm::vec3 norm;
     glm::vec3 color;
-    glm::vec2 uv; 
+    glm::vec2 uv;
 };
 
 struct Mesh
 {
     std::vector<Vertex> vertices;
-    std::vector<Vertex> vertices;
     GLuint VERTEX_BUFFER_OBJECT;
     GLuint VERTEX_ARRAY_OBJECT;
-    Mesh(std::vector<Vertex> &vertices);
+    Mesh(std::vector<Vertex> &vertices) : vertices(vertices), VERTEX_BUFFER_OBJECT(0), VERTEX_ARRAY_OBJECT(0){};
     void draw(GLuint shader);
 };
-
-
 
 static void error_callback(int error, const char* description)
 {
@@ -63,10 +60,9 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
  
 int main(void)
 {
+
+    //Creating a window
     GLFWwindow* window;
-    GLuint vertex_buffer, vertex_shader, fragment_shader, program;
-    GLint mvp_location, vpos_location, vcol_location;
- 
     glfwSetErrorCallback(error_callback);
  
     if (!glfwInit())
@@ -87,14 +83,10 @@ int main(void)
     gladLoadGL();
     glfwSwapInterval(1);
  
-    // NOTE: OpenGL error checks have been omitted for brevity
- 
-    Sphere sphere{};
-    std::vector<triangle> vertices = sphere.triangles;
-    glGenBuffers(1, &vertex_buffer);
-    glBindBuffer(GL_ARRAY_BUFFER, vertex_buffer);
-    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(triangle), vertices.data(), GL_STATIC_DRAW);
- 
+    GLuint VboID, VaoID, IboID, vertex_shader, fragment_shader, program;
+    GLint mvp_location, vpos_location, vnorm_location, vcol_location, vuv_location;
+
+    //Shaders
     vertex_shader = glCreateShader(GL_VERTEX_SHADER);
     glShaderSource(vertex_shader, 1, &vertex_shader_text, NULL);
     glCompileShader(vertex_shader);
@@ -103,29 +95,48 @@ int main(void)
     glShaderSource(fragment_shader, 1, &fragment_shader_text, NULL);
     glCompileShader(fragment_shader);
  
+    //Program
     program = glCreateProgram();
     glAttachShader(program, vertex_shader);
     glAttachShader(program, fragment_shader);
     glLinkProgram(program);
- 
+
     mvp_location = glGetUniformLocation(program, "MVP");
     vpos_location = glGetAttribLocation(program, "vPos");
+    vnorm_location = glGetAttribLocation(program, "vNorm");
     vcol_location = glGetAttribLocation(program, "vCol");
- 
-    glEnableVertexAttribArray(vpos_location);
-    glVertexAttribPointer(vpos_location, 3, GL_FLOAT, GL_FALSE,
-                          sizeof(vertices[0]), (void*) 0);
-    
-    std::vector<float> colors;
-    colors.reserve(vertices.size());
-    for (int i = 0; i < 9 * vertices.size(); i++)
-    {
-        colors.push_back(((float)rand() / RAND_MAX)/2 + 0.5f); //r
+    vuv_location = glGetAttribLocation(program, "vUV");
+
+    //dummy
+    Sphere sphere{};
+    std::vector<Vertex> vertices;
+    for(auto v : sphere.vertices) {
+        Vertex vertex = {.pos = v, .norm = v, .color = glm::vec3(1.f, 1.f, 1.f), .uv = glm::vec2(0.f, 0.f)};
+        vertices.push_back(vertex);
     }
+    Mesh mesh(vertices);
+
+    //Buffers
+    glGenBuffers(1, &VboID);
+    glBindBuffer(GL_ARRAY_BUFFER, VboID);
+    glBufferData(GL_ARRAY_BUFFER, mesh.vertices.size() * sizeof(Vertex), mesh.vertices.data(), GL_STATIC_DRAW);
+
+    glGenVertexArrays(1, &VaoID);
+    glBindVertexArray(VaoID);
+
+    glEnableVertexAttribArray(vpos_location);
+    glVertexAttribPointer(vpos_location, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void*) 0);  // 3 floats für Position
+    glEnableVertexAttribArray(vnorm_location);
+    glVertexAttribPointer(vnorm_location, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void*) 0); // 3 floats für den Normalenvektor
     glEnableVertexAttribArray(vcol_location);
-    glVertexAttribPointer(vcol_location, 3, GL_FLOAT, GL_FALSE,
-                          3 * sizeof(colors[0]), (void*) 0);
- 
+    glVertexAttribPointer(vcol_location, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void*) 0); // 3 floats für den Normalenvektor
+    glEnableVertexAttribArray(vuv_location);
+    glVertexAttribPointer(vuv_location, 2, GL_FLOAT, GL_FALSE, sizeof(glm::vec2), (void*) 0); // 2 floats als Textur-Koordinaten
+
+    glGenBuffers(1, &IboID);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IboID);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, 20 * 3 * sizeof(unsigned int), &sphere.indices, GL_STATIC_DRAW);
+
     while (!glfwWindowShouldClose(window))
     {
         float ratio;
@@ -147,6 +158,7 @@ int main(void)
         glUniformMatrix4fv(mvp_location, 1, GL_FALSE, (const GLfloat*) mvp);
         glDrawArrays(GL_TRIANGLES, 0, 60);
         // TODO glDrawElements
+        //glDrawElements(GL_TRIANGLES, 3 * sphere.indices.size(), GL_FLOAT, NULL);
 
         //glDrawElements(GL_TRIANGLES, num_vertices, GL_UNSIGNED_INT, NULL);
         glfwSwapBuffers(window);
