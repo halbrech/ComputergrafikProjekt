@@ -14,11 +14,11 @@ static const char* vertex_shader_text =
 "#version 110\n"
 "uniform mat4 MVP;\n"
 "attribute vec3 vCol;\n"
-"attribute vec2 vPos;\n"
+"attribute vec3 vPos;\n"
 "varying vec3 color;\n"
 "void main()\n"
 "{\n"
-"    gl_Position = MVP * vec4(vPos, 0.0, 1.0);\n"
+"    gl_Position = MVP * vec4(vPos, 1.0);\n"
 "    color = vCol;\n"
 "}\n";
  
@@ -86,6 +86,8 @@ int main(void)
     GLuint VboID, VaoID, IboID, vertex_shader, fragment_shader, program;
     GLint mvp_location, vpos_location, vnorm_location, vcol_location, vuv_location;
 
+    glEnable(GL_DEPTH_TEST);
+
     //Shaders
     vertex_shader = glCreateShader(GL_VERTEX_SHADER);
     glShaderSource(vertex_shader, 1, &vertex_shader_text, NULL);
@@ -137,6 +139,8 @@ int main(void)
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IboID);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sphere.indices.size() * sizeof(glm::uvec3), sphere.indices.data(), GL_STATIC_DRAW);
 
+    glBindVertexArray(VaoID);
+
     while (!glfwWindowShouldClose(window))
     {
         float ratio;
@@ -147,10 +151,10 @@ int main(void)
         ratio = width / (float) height;
  
         glViewport(0, 0, width, height);
-        glClear(GL_COLOR_BUFFER_BIT);
+        glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
  
         mat4x4_identity(m);
-        mat4x4_rotate_Z(m, m, (float) glfwGetTime());
+        mat4x4_rotate_X(m, m, (float) glfwGetTime());
         mat4x4_ortho(p, -ratio, ratio, -1.f, 1.f, 1.f, -1.f);
         mat4x4_mul(mvp, p, m);
  
@@ -160,6 +164,7 @@ int main(void)
         // TODO glDrawElements
         //glDrawElements(GL_TRIANGLES, 3 * sphere.indices.size(), GL_UNSIGNED_INT, NULL); ????
         glDrawElements(GL_TRIANGLES, 9 * sphere.indices.size(), GL_UNSIGNED_INT, NULL);
+        //glDrawArrays(GL_TRIANGLES, 0, vertices.size());
 
         //glDrawElements(GL_TRIANGLES, num_vertices, GL_UNSIGNED_INT, NULL);
         glfwSwapBuffers(window);
