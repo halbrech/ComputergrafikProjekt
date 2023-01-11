@@ -67,7 +67,7 @@ int main(void)
     gladLoadGL();
     glfwSwapInterval(1);
  
-    GLuint VboID, VaoID, IboID, vertex_shader, fragment_shader, program, m_texture;
+    GLuint VboID, VaoID, IboID, vertex_shader, fragment_shader, program, texture_location;
     GLint mvp_location, vpos_location, vnorm_location, vcol_location, vuv_location;
 
     glEnable(GL_DEPTH_TEST);
@@ -124,10 +124,11 @@ int main(void)
     vpos_location = glGetAttribLocation(program, "vPos");
     vnorm_location = glGetAttribLocation(program, "vNorm");
     vcol_location = glGetAttribLocation(program, "vCol");
-    vuv_location = glGetAttribLocation(program, "vUV");
+    vuv_location = glGetAttribLocation(program, "InTexCoord");
+    texture_location = glGetAttribLocation(program, "Texture");
 
     //dummy
-    # define PI           3.14159265358979323846
+    # define PI 3.14159265358979323846f
     Sphere sphere(3);
     std::vector<Vertex> vertices;
     for(auto v : sphere.vertices) {
@@ -163,14 +164,12 @@ int main(void)
     int w;
     int h;
     int comp;
-    unsigned char* image = stbi_load("../assets/test.png", &w, &h, &comp, STBI_rgb_alpha);
+    unsigned char* image = stbi_load("assets/test.png", &w, &h, &comp, STBI_rgb_alpha);
 
-    glGenTextures(1, &m_texture);
-    glBindTexture(GL_TEXTURE_2D, m_texture);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glGenTextures(1, &texture_location);
+    glBindTexture(GL_TEXTURE_2D, texture_location);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, image);
-    glBindTexture(GL_TEXTURE_2D, 0);
+    glBindTexture(GL_TEXTURE_2D, texture_location);
     stbi_image_free(image);
 
     while (!glfwWindowShouldClose(window))
