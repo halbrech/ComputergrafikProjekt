@@ -5,14 +5,14 @@
 #include <stb_image/stb_image.h>
 #include <glm/glm.hpp>
 #include "sphere.cpp"
- 
-#include <shader/shader.h>
 
 #include <linmath/linmath.h>
 #include <vector>
  
 #include <stdlib.h>
 #include <stdio.h>
+#include <fstream>
+#include <sstream>
 
 struct Vertex
 {
