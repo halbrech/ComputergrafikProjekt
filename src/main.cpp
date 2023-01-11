@@ -41,7 +41,20 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
         glfwSetWindowShouldClose(window, GLFW_TRUE);
 }
- 
+
+void GLAPIENTRY DebugMessageCallback( GLenum source,
+                 GLenum type,
+                 GLuint id,
+                 GLenum severity,
+                 GLsizei length,
+                 const GLchar* message,
+                 const void* userParam )
+{
+  fprintf( stderr, "GL CALLBACK: %s type = 0x%x, severity = 0x%x, message = %s\n",
+           ( type == GL_DEBUG_TYPE_ERROR ? "** GL ERROR **" : "" ),
+            type, severity, message );
+}
+
 int main(void)
 {
 
@@ -52,8 +65,8 @@ int main(void)
     if (!glfwInit())
         exit(EXIT_FAILURE);
  
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
  
     window = glfwCreateWindow(640, 480, "Simple example", NULL, NULL);
     if (!window) {
@@ -71,6 +84,9 @@ int main(void)
     GLint mvp_location, vpos_location, vnorm_location, vcol_location, vuv_location;
 
     glEnable(GL_DEPTH_TEST);
+    glEnable(GL_DEBUG_OUTPUT);
+    glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+    glDebugMessageCallback(DebugMessageCallback, 0);
 
     //Shaders
     const char* vertexPath = "shader/shader.vs";
@@ -121,38 +137,38 @@ int main(void)
     glLinkProgram(program);
 
     mvp_location = glGetUniformLocation(program, "MVP");
-    vpos_location = glGetAttribLocation(program, "vPos");
-    vnorm_location = glGetAttribLocation(program, "vNorm");
-    vcol_location = glGetAttribLocation(program, "vCol");
-    vuv_location = glGetAttribLocation(program, "InTexCoord");
-    texture_location = glGetAttribLocation(program, "Texture");
+    //vpos_location = glGetAttribLocation(program, "aPos");
+    //vnorm_location = glGetAttribLocation(program, "aNorms");
+    //vcol_location = glGetAttribLocation(program, "aColor");
+    //vuv_location = glGetAttribLocation(program, "aTexCoord");
+    texture_location = glGetUniformLocation(program, "ourTexture");
 
     //dummy
     # define PI 3.14159265358979323846f
     Sphere sphere(3);
     std::vector<Vertex> vertices;
     for(auto v : sphere.vertices) {
-        Vertex vertex = {.pos = v, .norm = v, .color = v, .uv = glm::vec2(asin(v.x)/PI + 0.5f, asin(v.y)/PI + 0.5f)};
+        Vertex vertex = {.pos = v, .norm = v, .color = v, .uv = glm::vec2(-atan2(v.x, v.z)/PI * 0.5, acos(v.y)/PI)};
         vertices.push_back(vertex);
     }
     Mesh mesh(vertices);
 
+    glGenVertexArrays(1, &VaoID);
+    glBindVertexArray(VaoID);
+    
     //Buffers
     glGenBuffers(1, &VboID);
     glBindBuffer(GL_ARRAY_BUFFER, VboID);
     glBufferData(GL_ARRAY_BUFFER, mesh.vertices.size() * sizeof(Vertex), mesh.vertices.data(), GL_STATIC_DRAW);
 
-    glGenVertexArrays(1, &VaoID);
-    glBindVertexArray(VaoID);
-
-    glEnableVertexAttribArray(vpos_location);
-    glVertexAttribPointer(vpos_location, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*) (0 * sizeof(float)));  // 3 floats für Position
-    glEnableVertexAttribArray(vnorm_location);
-    glVertexAttribPointer(vnorm_location, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*) (3 * sizeof(float))); // 3 floats für den Normalenvektor
-    glEnableVertexAttribArray(vcol_location);
-    glVertexAttribPointer(vcol_location, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*) (6 * sizeof(float))); // 3 floats für den Farbwert
-    glEnableVertexAttribArray(vuv_location);
-    glVertexAttribPointer(vuv_location, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*) (9 * sizeof(float))); // 2 floats als Textur-Koordinaten
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*) (0 * sizeof(float)));  // 3 floats für Position
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*) (3 * sizeof(float))); // 3 floats für den Normalenvektor
+    glEnableVertexAttribArray(2);
+    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*) (6 * sizeof(float))); // 3 floats für den Farbwert
+    glEnableVertexAttribArray(3);
+    glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*) (9 * sizeof(float))); // 2 floats als Textur-Koordinaten
 
     glGenBuffers(1, &IboID);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IboID);
@@ -164,12 +180,16 @@ int main(void)
     int w;
     int h;
     int comp;
-    unsigned char* image = stbi_load("assets/test.png", &w, &h, &comp, STBI_rgb_alpha);
-
-    glGenTextures(1, &texture_location);
-    glBindTexture(GL_TEXTURE_2D, texture_location);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, image);
-    glBindTexture(GL_TEXTURE_2D, texture_location);
+    unsigned char* image = stbi_load("assets/test.png", &w, &h, &comp, 0);
+    std::cout << w << ", " << h << std::endl;
+    GLuint texture;
+    glGenTextures(1, &texture);
+    glBindTexture(GL_TEXTURE_2D, texture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, w, h, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
     stbi_image_free(image);
 
     while (!glfwWindowShouldClose(window))
@@ -185,15 +205,16 @@ int main(void)
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
  
         mat4x4_identity(m);
-        mat4x4_rotate_X(m, m, (float) glfwGetTime());
+        mat4x4_rotate_Y(m, m, (float) glfwGetTime()/100);
         mat4x4_ortho(p, -ratio, ratio, -1.f, 1.f, 1.f, -1.f);
         mat4x4_mul(mvp, p, m);
  
         glUseProgram(program);
-        glUniformMatrix4fv(mvp_location, 1, GL_FALSE, (const GLfloat*) mvp);
-        //glDrawArrays(GL_TRIANGLES, 0, 60);
-        // TODO glDrawElements
-        glDrawElements(GL_TRIANGLES, 9 * sphere.indices.size(), GL_UNSIGNED_INT, NULL);
+        glUniformMatrix4fv(0, 1, GL_FALSE, (const GLfloat*) mvp);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, texture);
+        glUniform1i(1, 0);
+        glDrawElements(GL_TRIANGLES, 3 * sphere.indices.size(), GL_UNSIGNED_INT, NULL);
         glfwSwapBuffers(window);
         glfwPollEvents();
     }

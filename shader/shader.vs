@@ -1,13 +1,17 @@
-#version 110
-uniform mat4 MVP;
-attribute vec3 vCol;
-attribute vec3 vPos;
-attribute vec2 InTexCoord;
-varying vec3 color;
-varying vec2 TexCoord;
+#version 430 core
+layout (location = 0) in vec3 aPos;
+layout (location = 1) in vec3 aNorms;
+layout (location = 2) in vec3 aColor;
+layout (location = 3) in vec2 aTexCoord;
+
+layout (location = 0) uniform mat4 MVP;
+
+out vec3 ourColor;
+out vec2 TexCoord;
+
 void main()
 {
-    gl_Position = MVP * vec4(vPos, 1.0);
-    color = vCol;
-    TexCoord = InTexCoord;
-};
+    gl_Position = MVP * vec4(aPos, 1.0);
+    ourColor = aColor;
+    TexCoord = aTexCoord;
+}
