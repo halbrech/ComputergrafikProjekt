@@ -1,35 +1,19 @@
 #include <glad/glad.h>
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb_image/stb_image.h>
 #include <glm/glm.hpp>
 #include "sphere.cpp"
  
+#include <shader/shader.h>
+
 #include <linmath/linmath.h>
 #include <vector>
  
 #include <stdlib.h>
 #include <stdio.h>
 
-static const char* vertex_shader_text =
-"#version 110\n"
-"uniform mat4 MVP;\n"
-"attribute vec3 vCol;\n"
-"attribute vec3 vPos;\n"
-"varying vec3 color;\n"
-"void main()\n"
-"{\n"
-"    gl_Position = MVP * vec4(vPos, 1.0);\n"
-"    color = vCol;\n"
-"}\n";
- 
-static const char* fragment_shader_text =
-"#version 110\n"
-"varying vec3 color;\n"
-"void main()\n"
-"{\n"
-"    gl_FragColor = vec4(color, 1.0);\n"
-"}\n";
- 
 struct Vertex
 {
     glm::vec3 pos;
@@ -83,18 +67,51 @@ int main(void)
     gladLoadGL();
     glfwSwapInterval(1);
  
-    GLuint VboID, VaoID, IboID, vertex_shader, fragment_shader, program;
+    GLuint VboID, VaoID, IboID, vertex_shader, fragment_shader, program, m_texture;
     GLint mvp_location, vpos_location, vnorm_location, vcol_location, vuv_location;
 
     glEnable(GL_DEPTH_TEST);
 
     //Shaders
+    const char* vertexPath = "shader/shader.vs";
+    const char* fragmentPath = "shader/shader.fs";
+    std::string vertexCode;
+    std::string fragmentCode;
+    std::ifstream vShaderFile;
+    std::ifstream fShaderFile;
+    // ensure ifstream objects can throw exceptions:
+    vShaderFile.exceptions (std::ifstream::failbit | std::ifstream::badbit);
+    fShaderFile.exceptions (std::ifstream::failbit | std::ifstream::badbit);
+    try 
+    {
+        // open files
+        vShaderFile.open(vertexPath);
+        fShaderFile.open(fragmentPath);
+        std::stringstream vShaderStream, fShaderStream;
+        // read file's buffer contents into streams
+        vShaderStream << vShaderFile.rdbuf();
+        fShaderStream << fShaderFile.rdbuf();
+        // close file handlers
+        vShaderFile.close();
+        fShaderFile.close();
+        // convert stream into string
+        vertexCode   = vShaderStream.str();
+        fragmentCode = fShaderStream.str();
+    }
+    catch (std::ifstream::failure& e)
+    {
+        std::cout << "ERROR::SHADER::FILE_NOT_SUCCESFULLY_READ: " << e.what() << std::endl;
+    }
+    const char* vShaderCode = vertexCode.c_str();
+    const char * fShaderCode = fragmentCode.c_str();
+
+
     vertex_shader = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(vertex_shader, 1, &vertex_shader_text, NULL);
+    glShaderSource(vertex_shader, 1, &vShaderCode, NULL);
     glCompileShader(vertex_shader);
  
     fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(fragment_shader, 1, &fragment_shader_text, NULL);
+    glShaderSource(fragment_shader, 1, &fShaderCode, NULL);
     glCompileShader(fragment_shader);
  
     //Program
@@ -110,10 +127,11 @@ int main(void)
     vuv_location = glGetAttribLocation(program, "vUV");
 
     //dummy
+    # define PI           3.14159265358979323846
     Sphere sphere(3);
     std::vector<Vertex> vertices;
     for(auto v : sphere.vertices) {
-        Vertex vertex = {.pos = v, .norm = v, .color = v, .uv = glm::vec2(0.f, 0.f)};
+        Vertex vertex = {.pos = v, .norm = v, .color = v, .uv = glm::vec2(asin(v.x)/PI + 0.5f, asin(v.y)/PI + 0.5f)};
         vertices.push_back(vertex);
     }
     Mesh mesh(vertices);
@@ -141,6 +159,20 @@ int main(void)
 
     glBindVertexArray(VaoID);
 
+    //get png
+    int w;
+    int h;
+    int comp;
+    unsigned char* image = stbi_load("../assets/test.png", &w, &h, &comp, STBI_rgb_alpha);
+
+    glGenTextures(1, &m_texture);
+    glBindTexture(GL_TEXTURE_2D, m_texture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, image);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    stbi_image_free(image);
+
     while (!glfwWindowShouldClose(window))
     {
         float ratio;
@@ -162,11 +194,7 @@ int main(void)
         glUniformMatrix4fv(mvp_location, 1, GL_FALSE, (const GLfloat*) mvp);
         //glDrawArrays(GL_TRIANGLES, 0, 60);
         // TODO glDrawElements
-        //glDrawElements(GL_TRIANGLES, 3 * sphere.indices.size(), GL_UNSIGNED_INT, NULL); ????
         glDrawElements(GL_TRIANGLES, 9 * sphere.indices.size(), GL_UNSIGNED_INT, NULL);
-        //glDrawArrays(GL_TRIANGLES, 0, vertices.size());
-
-        //glDrawElements(GL_TRIANGLES, num_vertices, GL_UNSIGNED_INT, NULL);
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
