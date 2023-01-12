@@ -144,12 +144,17 @@ int main(void)
     texture_location = glGetUniformLocation(program, "ourTexture");
 
     //dummy
-    # define PI 3.14159265358979323846f
     Sphere sphere(3);
+    auto texturecoor = sphere.getTextureCoor();
     std::vector<Vertex> vertices;
-    for(auto v : sphere.vertices) {
-        Vertex vertex = {.pos = v, .norm = v, .color = v, .uv = glm::vec2(-atan2(v.x, v.z)/PI * 0.5, acos(v.y)/PI)};
+    for (size_t i = 0; i < sphere.vertices.size(); i++)
+    {
+        Vertex vertex = {.pos = sphere.vertices[i], .norm = sphere.vertices[i], .color = sphere.vertices[i], .uv = texturecoor[i]};
         vertices.push_back(vertex);
+    }
+    
+    for(auto v : sphere.vertices) {
+        
     }
     Mesh mesh(vertices);
 
