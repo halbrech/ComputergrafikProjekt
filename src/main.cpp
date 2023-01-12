@@ -25,9 +25,42 @@ struct Vertex
 struct Mesh
 {
     std::vector<Vertex> vertices;
-    GLuint VERTEX_BUFFER_OBJECT;
+    std::vector<glm::uvec3> indices;
     GLuint VERTEX_ARRAY_OBJECT;
-    Mesh(std::vector<Vertex> &vertices) : vertices(vertices), VERTEX_BUFFER_OBJECT(0), VERTEX_ARRAY_OBJECT(0){};
+    GLuint VERTEX_BUFFER_OBJECT;
+    GLuint INDEX_BUFFER_OBJECT;
+    Mesh(std::vector<Vertex> &vertices, std::vector<glm::uvec3> &indices) : vertices(vertices), indices(indices) {
+        // Vao
+        glGenVertexArrays(1, &VERTEX_ARRAY_OBJECT);
+        glBindVertexArray(VERTEX_ARRAY_OBJECT);
+        // Vbo
+        glGenBuffers(1, &VERTEX_BUFFER_OBJECT);
+        glBindBuffer(GL_ARRAY_BUFFER, VERTEX_BUFFER_OBJECT);
+        glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex), vertices.data(), GL_STATIC_DRAW);
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*) (0 * sizeof(float)));  // 3 floats für Position
+        glEnableVertexAttribArray(1);
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*) (3 * sizeof(float))); // 3 floats für den Normalenvektor
+        glEnableVertexAttribArray(2);
+        glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*) (6 * sizeof(float))); // 3 floats für den Farbwert
+        glEnableVertexAttribArray(3);
+        glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*) (9 * sizeof(float))); // 2 floats als Textur-Koordinaten
+        // Ibo
+        glGenBuffers(1, &INDEX_BUFFER_OBJECT);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, INDEX_BUFFER_OBJECT);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(glm::uvec3), indices.data(), GL_STATIC_DRAW);
+    }
+
+    Mesh(std::vector<glm::vec3> &pos, std::vector<glm::vec3> &norm, std::vector<glm::vec3> &color, std::vector<glm::vec2> &texturecoor, std::vector<glm::uvec3> &indices) {
+        std::vector<Vertex> vertices;
+        vertices.reserve(pos.size());
+        for (size_t i = 0; i < pos.size(); i++) {
+            Vertex v = {.pos = pos[i], .norm = norm[i], .color = color[i], .uv = texturecoor[i]};
+            vertices.push_back(v);
+        }
+        Mesh(vertices, indices);
+    }
+
     void draw(GLuint shader);
 };
 
@@ -42,14 +75,7 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
         glfwSetWindowShouldClose(window, GLFW_TRUE);
 }
 
-void GLAPIENTRY DebugMessageCallback( GLenum source,
-                 GLenum type,
-                 GLuint id,
-                 GLenum severity,
-                 GLsizei length,
-                 const GLchar* message,
-                 const void* userParam )
-{
+void GLAPIENTRY DebugMessageCallback( GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const void* userParam) {
   fprintf( stderr, "GL CALLBACK: %s type = 0x%x, severity = 0x%x, message = %s\n",
            ( type == GL_DEBUG_TYPE_ERROR ? "** GL ERROR **" : "" ),
             type, severity, message );
@@ -137,50 +163,14 @@ int main(void)
     glLinkProgram(program);
 
     mvp_location = glGetUniformLocation(program, "MVP");
-    //vpos_location = glGetAttribLocation(program, "aPos");
-    //vnorm_location = glGetAttribLocation(program, "aNorms");
-    //vcol_location = glGetAttribLocation(program, "aColor");
-    //vuv_location = glGetAttribLocation(program, "aTexCoord");
     texture_location = glGetUniformLocation(program, "ourTexture");
 
     //dummy
     Sphere sphere(3);
     auto texturecoor = sphere.getTextureCoor();
-    std::vector<Vertex> vertices;
-    for (size_t i = 0; i < sphere.vertices.size(); i++)
-    {
-        Vertex vertex = {.pos = sphere.vertices[i], .norm = sphere.vertices[i], .color = sphere.vertices[i], .uv = texturecoor[i]};
-        vertices.push_back(vertex);
-    }
+    Mesh earth(sphere.vertices, sphere.vertices, sphere.vertices, texturecoor, sphere.indices);
     
-    for(auto v : sphere.vertices) {
-        
-    }
-    Mesh mesh(vertices);
-
-    glGenVertexArrays(1, &VaoID);
-    glBindVertexArray(VaoID);
     
-    //Buffers
-    glGenBuffers(1, &VboID);
-    glBindBuffer(GL_ARRAY_BUFFER, VboID);
-    glBufferData(GL_ARRAY_BUFFER, mesh.vertices.size() * sizeof(Vertex), mesh.vertices.data(), GL_STATIC_DRAW);
-
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*) (0 * sizeof(float)));  // 3 floats für Position
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*) (3 * sizeof(float))); // 3 floats für den Normalenvektor
-    glEnableVertexAttribArray(2);
-    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*) (6 * sizeof(float))); // 3 floats für den Farbwert
-    glEnableVertexAttribArray(3);
-    glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*) (9 * sizeof(float))); // 2 floats als Textur-Koordinaten
-
-    glGenBuffers(1, &IboID);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IboID);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sphere.indices.size() * sizeof(glm::uvec3), sphere.indices.data(), GL_STATIC_DRAW);
-
-    glBindVertexArray(VaoID);
-
     //get png
     int w;
     int h;
@@ -216,9 +206,7 @@ int main(void)
  
         glUseProgram(program);
         glUniformMatrix4fv(0, 1, GL_FALSE, (const GLfloat*) mvp);
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, texture);
-        glUniform1i(1, 0);
+        //glUniform1i(1, 0);
         glDrawElements(GL_TRIANGLES, 3 * sphere.indices.size(), GL_UNSIGNED_INT, NULL);
         glfwSwapBuffers(window);
         glfwPollEvents();
