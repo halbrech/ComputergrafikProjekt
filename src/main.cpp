@@ -4,6 +4,10 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image/stb_image.h>
 #include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
+#include <shader/shader.h>
 #include "sphere.cpp"
 
 #include <linmath/linmath.h>
@@ -105,73 +109,21 @@ int main(void)
     glfwMakeContextCurrent(window);
     gladLoadGL();
     glfwSwapInterval(1);
- 
-    GLuint VboID, VaoID, IboID, vertex_shader, fragment_shader, program, texture_location;
-    GLint mvp_location, vpos_location, vnorm_location, vcol_location, vuv_location;
 
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_DEBUG_OUTPUT);
     glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
     glDebugMessageCallback(DebugMessageCallback, 0);
 
-    //Shaders
-    const char* vertexPath = "shader/shader.vs";
-    const char* fragmentPath = "shader/shader.fs";
-    std::string vertexCode;
-    std::string fragmentCode;
-    std::ifstream vShaderFile;
-    std::ifstream fShaderFile;
-    // ensure ifstream objects can throw exceptions:
-    vShaderFile.exceptions (std::ifstream::failbit | std::ifstream::badbit);
-    fShaderFile.exceptions (std::ifstream::failbit | std::ifstream::badbit);
-    try 
-    {
-        // open files
-        vShaderFile.open(vertexPath);
-        fShaderFile.open(fragmentPath);
-        std::stringstream vShaderStream, fShaderStream;
-        // read file's buffer contents into streams
-        vShaderStream << vShaderFile.rdbuf();
-        fShaderStream << fShaderFile.rdbuf();
-        // close file handlers
-        vShaderFile.close();
-        fShaderFile.close();
-        // convert stream into string
-        vertexCode   = vShaderStream.str();
-        fragmentCode = fShaderStream.str();
-    }
-    catch (std::ifstream::failure& e)
-    {
-        std::cout << "ERROR::SHADER::FILE_NOT_SUCCESFULLY_READ: " << e.what() << std::endl;
-    }
-    const char* vShaderCode = vertexCode.c_str();
-    const char * fShaderCode = fragmentCode.c_str();
+    //shader
+    Shader earthShader("shader/shader.vs", "shader/shader.fs");
 
-
-    vertex_shader = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(vertex_shader, 1, &vShaderCode, NULL);
-    glCompileShader(vertex_shader);
- 
-    fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(fragment_shader, 1, &fShaderCode, NULL);
-    glCompileShader(fragment_shader);
- 
-    //Program
-    program = glCreateProgram();
-    glAttachShader(program, vertex_shader);
-    glAttachShader(program, fragment_shader);
-    glLinkProgram(program);
-
-    mvp_location = glGetUniformLocation(program, "MVP");
-    texture_location = glGetUniformLocation(program, "ourTexture");
-
-    //dummy
+    //earth
     Sphere sphere(3);
     auto texturecoor = sphere.getTextureCoor();
     Mesh earth(sphere.vertices, sphere.vertices, sphere.vertices, texturecoor, sphere.indices);
     
-    
-    //get png
+    //create texture
     int w;
     int h;
     int comp;
@@ -187,27 +139,28 @@ int main(void)
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, w, h, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
     stbi_image_free(image);
 
+    //create matrix
+    int SCR_WIDTH = 800;
+    int SCR_HEIGHT = 600;
+    glfwGetFramebufferSize(window, &SCR_WIDTH, &SCR_HEIGHT);
+    glm::mat4 model = glm::mat4(1.0f);
+    glm::mat4 view = glm::lookAt(glm::vec3(0,0,-3), glm::vec3(0,0,0), glm::vec3(0,1,0));
+    glm::mat4 projection = glm::perspective(45.0f, (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
+
+    //configure shader
+    earthShader.use();
+    earthShader.setInt("ourTexture", 0);
+    earthShader.setMat4("model", model);
+    earthShader.setMat4("view", view);
+    earthShader.setMat4("projection", projection);
+
     while (!glfwWindowShouldClose(window))
     {
-        float ratio;
-        int width, height;
-        mat4x4 m, p, mvp;
- 
-        glfwGetFramebufferSize(window, &width, &height);
-        ratio = width / (float) height;
- 
-        glViewport(0, 0, width, height);
+        glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
- 
-        mat4x4_identity(m);
-        mat4x4_rotate_Y(m, m, (float) glfwGetTime()/100);
-        mat4x4_ortho(p, -ratio, ratio, -1.f, 1.f, 1.f, -1.f);
-        mat4x4_mul(mvp, p, m);
- 
-        glUseProgram(program);
-        glUniformMatrix4fv(0, 1, GL_FALSE, (const GLfloat*) mvp);
-        //glUniform1i(1, 0);
+
         glDrawElements(GL_TRIANGLES, 3 * sphere.indices.size(), GL_UNSIGNED_INT, NULL);
+
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
