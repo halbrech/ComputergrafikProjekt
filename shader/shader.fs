@@ -8,6 +8,7 @@ layout (location = 1) uniform sampler2D ourTexture;
 
 void main()
 {
-    FragColor = texture(ourTexture, TexCoord);
-    //FragColor = vec4(TexCoord, 1.0, 1.0);
+    float ambient = 0.1f;
+    float diff = max(dot(vec3(1.0f, 1.0f, 0.0f), ourColor), 0.0f);
+    FragColor =  (diff + ambient) * texture(ourTexture, TexCoord);
 }
