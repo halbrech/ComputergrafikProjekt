@@ -17,6 +17,7 @@
 #include <stdio.h>
 #include <fstream>
 #include <sstream>
+#include <chrono>
 
 struct Vertex
 {
@@ -118,6 +119,25 @@ unsigned int loadCubemap(std::vector<std::string> faces)
     return textureID;
 }
 
+std::vector<std::string> generateDates(int year) {
+  struct tm date = {0, 0, 0, 1, 8, year - 1900}; // Initialize a tm struct with the first day of the year
+  std::vector<std::string> dates;
+
+  while (date.tm_year == year - 1900) {
+    char dateString[13];
+    for (size_t hour = 0; hour < 2400; hour += 100)
+    {
+        sprintf(dateString, "%04d%02d%02d_%04d", date.tm_year + 1900, date.tm_mon + 1, date.tm_mday, hour);
+        dates.push_back(dateString);
+    }
+    // Increment the date by one day
+    date.tm_mday++;
+    mktime(&date);
+  }
+
+  return dates;
+}
+
 int main(void)
 {
 
@@ -203,8 +223,7 @@ int main(void)
          1.0f, -1.0f,  1.0f
     };
 
-    //std::vector<std::string> faces {"assets/cube/px.png", "assets/cube/px.png", "assets/cube/px.png", "assets/cube/px.png", "assets/cube/px.png", "assets/cube/px.png"};
-    std::vector<std::string> faces{"assets/cube/px.png", "assets/cube/nx.png", "assets/cube/py.png", "assets/cube/ny.png", "assets/cube/nz.png", "assets/cube/pz.png"};
+    std::vector<std::string> faces{"assets/cube/px.png", "assets/cube/nx.png", "assets/cube/py.png", "assets/cube/ny.png", "assets/cube/pz.png", "assets/cube/nz.png"};
     unsigned int cubemapTexture = loadCubemap(faces);
 
     // skybox VAO
@@ -218,12 +237,19 @@ int main(void)
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
     
     
+    //std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
     //create texture
+    std::vector<std::string> dates = generateDates(2005);
+    size_t date = 0;
+    std::string globepath = "assets/globe/visible_globe_c1440_NR_BETA9-SNAP_" + dates[date] + "z.png";
+    std::cout << globepath << std::endl;
     int w;
     int h;
     int comp;
-    unsigned char* image = stbi_load("assets/test.png", &w, &h, &comp, 0);
-    std::cout << w << ", " << h << std::endl;
+    unsigned char* image = stbi_load(globepath.c_str(), &w, &h, &comp, 0);
+    std::cout << w << " " << h << std::endl;
+    //std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+    //std::cout << "Time difference = " << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() << "[ms]" << std::endl;
     GLuint texture;
     glGenTextures(1, &texture);
     glBindTexture(GL_TEXTURE_2D, texture);
@@ -233,6 +259,7 @@ int main(void)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, w, h, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
     stbi_image_free(image);
+    
 
     //create matrix
     int SCR_WIDTH = 800;
@@ -252,25 +279,34 @@ int main(void)
     
     universeboxShader.use();
     universeboxShader.setInt("skybox", 0);
-    glm::mat4 viewcube = glm::lookAt(glm::vec3(0,0,0), glm::vec3(0,0,1), glm::vec3(0,1,0));
+    glm::mat4 viewcube = glm::lookAt(glm::vec3(0,0,0), glm::vec3(0, 1, 0), glm::vec3(0,0,1));
     glm::mat4 projectioncube = glm::perspective(90.0f, (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
     universeboxShader.setMat4("view", viewcube); //TODO
     universeboxShader.setMat4("projection", projectioncube);
     glClearColor(1.0, 1.0, 1.0, 1.0);
 
     while (!glfwWindowShouldClose(window))
-    {
+    {   
+        glfwGetFramebufferSize(window, &SCR_WIDTH, &SCR_HEIGHT);
         glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 
+        // draw earth
         earthShader.use();
         glBindVertexArray(earth.VERTEX_ARRAY_OBJECT);
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, texture);
+        //update texture
+        date++;
+        globepath = "assets/globe/visible_globe_c1440_NR_BETA9-SNAP_" + dates[date] + "z.png";
+        std::cout << globepath << std::endl;
+        image = stbi_load(globepath.c_str(), &w, &h, &comp, 0);
+        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, w, h, GL_RGB, GL_UNSIGNED_BYTE, image);
+
         glDrawElements(GL_TRIANGLES, 3 * earth.indices.size(), GL_UNSIGNED_INT, NULL);
         glBindVertexArray(0);
         
-        
+        // draw universe
         universeboxShader.use();
         glDepthFunc(GL_LEQUAL);
         glBindVertexArray(skyboxVAO);
