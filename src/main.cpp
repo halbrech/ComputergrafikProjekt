@@ -235,12 +235,14 @@ int main(void)
 
     //shader
     Shader earthShader("shader/shader.vs", "shader/shader.fs");
+    Shader moonShader("shader/moon.vs", "shader/moon.fs");
     Shader universeboxShader("shader/universebox.vs", "shader/universebox.fs");
 
     //earth
     Sphere sphere(3);
     auto texturecoor = sphere.getTextureCoor();
     Mesh earth(sphere.vertices, sphere.vertices, sphere.vertices, texturecoor, sphere.indices);
+    Mesh moon(sphere.vertices, sphere.vertices, sphere.vertices, texturecoor, sphere.indices);
     
     //universebox
      float skyboxVertices[] = {
@@ -306,11 +308,13 @@ int main(void)
     //create texture
     std::vector<std::string> dates = generateDates(2005);
     size_t date = 0;
-    std::string globepath = "assets/globe/visible_globe_c1440_NR_BETA9-SNAP_" + dates[date] + "z.png";
+    std::string globepath = "assets/low_res_globe/visible_globe_c1440_NR_BETA9-SNAP_" + dates[date] + "z.png";
     std::cout << globepath << std::endl;
     unsigned int earthtexture = loadTexture(globepath);    
 
     unsigned int nighttexture = loadTexture("assets/BlackMarble_2016_3km_gray.jpg");
+
+    unsigned int moontexture = loadTexture("assets/moon2.png");
 
 
     glm::vec4 lightdir = glm::vec4(1.0, 1.0, 0.0, 0.0);
@@ -330,7 +334,16 @@ int main(void)
     earthShader.setMat4("view", view);
     earthShader.setMat4("projection", projection);
 
-    
+    glm::mat4 modelmoon = glm::mat4(1.0f);
+    modelmoon = glm::scale(modelmoon, glm::vec3(0.2, 0.2, 0.2));
+    modelmoon = glm::translate(modelmoon, glm::vec3(8.0, 0.0, 0.0));
+    //configure shader
+    moonShader.use();
+    moonShader.setInt("ourTexture", 0);
+    moonShader.setMat4("model", modelmoon);
+    moonShader.setMat4("view", view);
+    moonShader.setMat4("projection", projection);
+
     universeboxShader.use();
     universeboxShader.setInt("skybox", 0);
     glm::mat4 viewcube = glm::lookAt(glm::vec3(0,0,0), glm::vec3(0, 1, 0), glm::vec3(0,0,1));
@@ -347,7 +360,8 @@ int main(void)
 
         // draw earth
         earthShader.use();
-        glm::mat4 rot = glm::rotate(glm::mat4(1.0), glm::radians(15.0f*(float)date), glm::vec3(0.0, 1.0, 0.0));
+        //glm::mat4 rot = glm::rotate(glm::mat4(1.0), glm::radians(15.0f*(float)date), glm::vec3(0.0, 1.0, 0.0));
+        glm::mat4 rot = glm::rotate(glm::mat4(1.0), glm::radians((float)date), glm::vec3(0.0, 1.0, 0.0));
         earthShader.setVec4("lightdir", rot * lightdir);
         earthShader.setMat4("model", model);
         glBindVertexArray(earth.VERTEX_ARRAY_OBJECT);
@@ -357,7 +371,7 @@ int main(void)
         //update texture
         date = (date + 1) % dates.size();
         std::cout << dates[date] << std::endl;
-        globepath = "assets/globe/visible_globe_c1440_NR_BETA9-SNAP_" + dates[date] + "z.png";
+        globepath = "assets/low_res_globe/visible_globe_c1440_NR_BETA9-SNAP_" + dates[date] + "z.png";
         updateTexture(earthtexture, globepath);
         glActiveTexture(GL_TEXTURE0 + 1);
         earthShader.setInt("ourTexture2", 1);
@@ -365,6 +379,17 @@ int main(void)
         glDrawElements(GL_TRIANGLES, 3 * earth.indices.size(), GL_UNSIGNED_INT, NULL);
         glBindVertexArray(0);
         
+        // draw moon
+        moonShader.use();
+        moonShader.setVec4("lightdir", rot * lightdir);
+        moonShader.setMat4("model", modelmoon);
+        glBindVertexArray(moon.VERTEX_ARRAY_OBJECT);
+        glActiveTexture(GL_TEXTURE0);
+        moonShader.setInt("ourTexture", 0);
+        glBindTexture(GL_TEXTURE_2D, moontexture);
+        glDrawElements(GL_TRIANGLES, 3 * moon.indices.size(), GL_UNSIGNED_INT, NULL);
+        glBindVertexArray(0);
+
         // draw universe
         universeboxShader.use();
         glDepthFunc(GL_LEQUAL);
