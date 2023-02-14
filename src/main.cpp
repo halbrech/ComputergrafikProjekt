@@ -216,7 +216,7 @@ int main(void)
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
  
-    window = glfwCreateWindow(640, 480, "Simple example", NULL, NULL);
+    window = glfwCreateWindow(640, 480, "Globeviewer", NULL, NULL);
     if (!window) {
         glfwTerminate();
         exit(EXIT_FAILURE);
@@ -348,7 +348,7 @@ int main(void)
     universeboxShader.setInt("skybox", 0);
     glm::mat4 viewcube = glm::lookAt(glm::vec3(0,0,0), glm::vec3(0, 1, 0), glm::vec3(0,0,1));
     glm::mat4 projectioncube = glm::perspective(90.0f, (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
-    universeboxShader.setMat4("view", viewcube); //TODO
+    universeboxShader.setMat4("view", viewcube);
     universeboxShader.setMat4("projection", projectioncube);
     glClearColor(1.0, 1.0, 1.0, 1.0);
 
@@ -358,12 +358,15 @@ int main(void)
         glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 
+        projection = glm::perspective(45.0f, (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
+
         // draw earth
         earthShader.use();
         //glm::mat4 rot = glm::rotate(glm::mat4(1.0), glm::radians(15.0f*(float)date), glm::vec3(0.0, 1.0, 0.0));
         glm::mat4 rot = glm::rotate(glm::mat4(1.0), glm::radians((float)date), glm::vec3(0.0, 1.0, 0.0));
         earthShader.setVec4("lightdir", rot * lightdir);
         earthShader.setMat4("model", model);
+        earthShader.setMat4("projection", projection);
         glBindVertexArray(earth.VERTEX_ARRAY_OBJECT);
         glActiveTexture(GL_TEXTURE0);
         earthShader.setInt("ourTexture", 0);
@@ -382,6 +385,7 @@ int main(void)
         // draw moon
         moonShader.use();
         moonShader.setVec4("lightdir", rot * lightdir);
+        moonShader.setMat4("projection", projection);
         modelmoon = glm::mat4(1.0);
         modelmoon = glm::rotate(modelmoon, 0.5f * glm::radians((float)date), glm::vec3(0.0, 1.0, 0.0));
         rotation = modelmoon;
@@ -398,6 +402,8 @@ int main(void)
 
         // draw universe
         universeboxShader.use();
+        projectioncube = glm::perspective(90.0f, (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
+        universeboxShader.setMat4("projection", projectioncube);
         glDepthFunc(GL_LEQUAL);
         glBindVertexArray(skyboxVAO);
         glActiveTexture(GL_TEXTURE0);
