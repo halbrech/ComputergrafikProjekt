@@ -335,8 +335,8 @@ int main(void)
     earthShader.setMat4("projection", projection);
 
     glm::mat4 modelmoon = glm::mat4(1.0f);
-    modelmoon = glm::scale(modelmoon, glm::vec3(0.2, 0.2, 0.2));
-    modelmoon = glm::translate(modelmoon, glm::vec3(8.0, 0.0, 0.0));
+    glm::mat4 rotation = glm::mat4(1.0f);
+
     //configure shader
     moonShader.use();
     moonShader.setInt("ourTexture", 0);
@@ -382,7 +382,13 @@ int main(void)
         // draw moon
         moonShader.use();
         moonShader.setVec4("lightdir", rot * lightdir);
+        modelmoon = glm::mat4(1.0);
+        modelmoon = glm::rotate(modelmoon, 0.5f * glm::radians((float)date), glm::vec3(0.0, 1.0, 0.0));
+        rotation = modelmoon;
+        modelmoon = glm::scale(modelmoon, glm::vec3(0.2, 0.2, 0.2));
+        modelmoon = glm::translate(modelmoon, glm::vec3(8.0, 0.0, 0.0));
         moonShader.setMat4("model", modelmoon);
+        moonShader.setMat4("rotation", rotation);
         glBindVertexArray(moon.VERTEX_ARRAY_OBJECT);
         glActiveTexture(GL_TEXTURE0);
         moonShader.setInt("ourTexture", 0);
