@@ -18,6 +18,9 @@
 #include <fstream>
 #include <sstream>
 #include <chrono>
+#include <thread>
+
+# define PI 3.14159265358979323846f
 
 struct Vertex
 {
@@ -305,14 +308,19 @@ int main(void)
     size_t date = 0;
     std::string globepath = "assets/globe/visible_globe_c1440_NR_BETA9-SNAP_" + dates[date] + "z.png";
     std::cout << globepath << std::endl;
-    unsigned int earthtexture = loadTexture(globepath);
+    unsigned int earthtexture = loadTexture(globepath);    
+
+    unsigned int nighttexture = loadTexture("assets/BlackMarble_2016_3km_gray.jpg");
+
+
+    glm::vec4 lightdir = glm::vec4(1.0, 1.0, 0.0, 0.0);
 
     //create matrix
     int SCR_WIDTH = 800;
     int SCR_HEIGHT = 600;
     glfwGetFramebufferSize(window, &SCR_WIDTH, &SCR_HEIGHT);
     glm::mat4 model = glm::mat4(1.0f);
-    glm::mat4 view = glm::lookAt(glm::vec3(0,0,-3), glm::vec3(0,0,0), glm::vec3(0,1,0));
+    glm::mat4 view = glm::lookAt(glm::vec3(0,0,3), glm::vec3(0,0,0), glm::vec3(0,1,0));
     glm::mat4 projection = glm::perspective(45.0f, (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
 
     //configure shader
@@ -339,13 +347,21 @@ int main(void)
 
         // draw earth
         earthShader.use();
+        glm::mat4 rot = glm::rotate(glm::mat4(1.0), glm::radians(15.0f*(float)date), glm::vec3(0.0, 1.0, 0.0));
+        earthShader.setVec4("lightdir", rot * lightdir);
+        earthShader.setMat4("model", model);
         glBindVertexArray(earth.VERTEX_ARRAY_OBJECT);
         glActiveTexture(GL_TEXTURE0);
+        earthShader.setInt("ourTexture", 0);
         glBindTexture(GL_TEXTURE_2D, earthtexture);
         //update texture
-        date++;
+        date = (date + 1) % dates.size();
+        std::cout << dates[date] << std::endl;
         globepath = "assets/globe/visible_globe_c1440_NR_BETA9-SNAP_" + dates[date] + "z.png";
         updateTexture(earthtexture, globepath);
+        glActiveTexture(GL_TEXTURE0 + 1);
+        earthShader.setInt("ourTexture2", 1);
+        glBindTexture(GL_TEXTURE_2D, nighttexture);
         glDrawElements(GL_TRIANGLES, 3 * earth.indices.size(), GL_UNSIGNED_INT, NULL);
         glBindVertexArray(0);
         
@@ -359,7 +375,6 @@ int main(void)
         glBindVertexArray(0);
         glDepthFunc(GL_LESS);
         
-
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
